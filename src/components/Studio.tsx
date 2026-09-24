@@ -54,6 +54,7 @@ const COLOR_ROWS: { key: keyof Colors; label: string; hint: string }[] = [
 ];
 
 const DENIM = '#3E5F8A';
+const SINGLE_FILE = import.meta.env.MODE === 'single';
 
 export function Studio({ look, setLook, ctx, setCtx, photo, setPhoto, onSave, onCompare, onShare, onLearn, toast, shareBox }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -61,6 +62,7 @@ export function Studio({ look, setLook, ctx, setCtx, photo, setPhoto, onSave, on
   const [saveName, setSaveName] = useState('');
   const [saveNote, setSaveNote] = useState('');
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const garment = GARMENT_BY_ID[look.garment];
   const warnings = useMemo(() => checkLook(look, ctx), [look, ctx]);
@@ -121,8 +123,14 @@ export function Studio({ look, setLook, ctx, setCtx, photo, setPhoto, onSave, on
           garment.tagline,
         ],
       });
+      if (SINGLE_FILE) {
+        // Bản nhúng không được phép tải file: hiện ảnh để người dùng tự lưu.
+        if (preview) URL.revokeObjectURL(preview);
+        setPreview(URL.createObjectURL(blob));
+        return;
+      }
       downloadBlob(blob, `${slugify(name)}.png`);
-      toast('Đã tạo ảnh PNG. Nếu trình duyệt chặn tải xuống, hãy mở ứng dụng trong tab riêng.');
+      toast('Đã tải ảnh PNG.');
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Không tạo được ảnh.');
     }
@@ -393,6 +401,17 @@ export function Studio({ look, setLook, ctx, setCtx, photo, setPhoto, onSave, on
           </form>
         )}
         {shareBox}
+        {preview && (
+          <figure className="png-preview">
+            <img src={preview} alt={`Ảnh lookbook: ${name}`} />
+            <figcaption>
+              Nhấn giữ (điện thoại) hoặc chuột phải (máy tính) vào ảnh để lưu.{' '}
+              <button type="button" className="btn btn-ghost btn-small" onClick={() => setPreview(null)}>
+                Đóng
+              </button>
+            </figcaption>
+          </figure>
+        )}
       </div>
 
       <aside className="results">
